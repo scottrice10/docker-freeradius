@@ -25,9 +25,26 @@ RUN sed -i 's/allow_vulnerable_openssl.*/allow_vulnerable_openssl = yes/g' \
 ADD ./src/clients.conf /usr/local/etc/raddb/clients.conf
 ADD ./src/users /usr/local/etc/raddb/users
 
+# Set up postgres
+ENV PG_VERSION 9.3
+RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
+ && echo 'deb http://apt.postgresql.org/pub/repos/apt/ trusty-pgdg main' > /etc/apt/sources.list.d/pgdg.list \
+ && apt-get update \
+ && apt-get install -y postgresql-${PG_VERSION} postgresql-client-${PG_VERSION} postgresql-contrib-${PG_VERSION} \
+ && rm -rf /var/lib/postgresql \
+ && rm -rf /var/lib/apt/lists/* # 20150504
+ 
+ADD start /start
+RUN chmod 755 /start
+
 EXPOSE 1812/udp
 EXPOSE 1813/udp
 EXPOSE 1814/udp
 EXPOSE 18120/udp
+EXPOSE 5432
+
+VOLUME ["/var/lib/postgresql"]
+VOLUME ["/run/postgresql"]
 
 CMD /usr/local/sbin/radiusd -xx -l /var/log/radius/radius.log -f
+CMD ["/start"]
